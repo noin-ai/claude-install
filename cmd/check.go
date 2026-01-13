@@ -12,7 +12,8 @@ var checkCmd = &cobra.Command{
 	Short: "检查当前系统环境",
 	Long:  `检查系统信息和依赖安装状态，不进行任何安装操作。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("🔍 正在检查系统环境...\n")
+		fmt.Println("🔍 正在检查系统环境...")
+		fmt.Println()
 
 		// 系统信息
 		sysInfo := system.Detect()

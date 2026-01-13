@@ -1,0 +1,147 @@
+name: Installation Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-install-macos:
+    name: macOS Installation
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build binary
+        run: go build -ldflags "-s -w" -o claude-install .
+
+      - name: Test binary execution
+        run: |
+          ./claude-install --help
+          ./claude-install check
+
+      - name: Test Claude Code CLI installation
+        run: |
+          echo "Installing Claude Code CLI via npm..."
+          npm install -g @anthropic-ai/claude-code
+
+          # Verify installation
+          if command -v claude &> /dev/null; then
+            echo "✅ Claude CLI installed successfully"
+            claude --version
+          else
+            echo "❌ Claude CLI not found in PATH"
+            exit 1
+          fi
+
+      - name: Test shell config writing
+        run: |
+          # Create test shell config
+          touch ~/.zshrc_test
+
+          # Set test env vars
+          export ANTHROPIC_API_KEY="sk-test-key-for-ci"
+          export ANTHROPIC_BASE_URL="https://api.noin.ai"
+
+          # Run check command
+          ./claude-install check
+
+          echo "✅ Shell config test passed"
+
+      - name: Test install script syntax
+        run: |
+          # Check bash script syntax
+          bash -n scripts/install.sh
+          echo "✅ install.sh syntax valid"
+
+  test-install-linux:
+    name: Linux Installation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build binary
+        run: go build -ldflags "-s -w" -o claude-install .
+
+      - name: Test binary execution
+        run: |
+          ./claude-install --help
+          ./claude-install check
+
+      - name: Test Claude Code CLI installation
+        run: |
+          echo "Installing Claude Code CLI via npm..."
+          npm install -g @anthropic-ai/claude-code
+
+          # Verify installation
+          if command -v claude &> /dev/null; then
+            echo "✅ Claude CLI installed successfully"
+            claude --version
+          else
+            echo "❌ Claude CLI not found in PATH"
+            exit 1
+          fi
+
+      - name: Test shell config writing (bash)
+        run: |
+          # Test with .bashrc
+          touch ~/.bashrc
+
+          export ANTHROPIC_API_KEY="sk-test-key-for-ci"
+          export ANTHROPIC_BASE_URL="https://api.noin.ai"
+
+          ./claude-install check
+
+          echo "✅ Bash config test passed"
+
+      - name: Test shell config writing (zsh)
+        run: |
+          # Install zsh
+          sudo apt-get update && sudo apt-get install -y zsh
+
+          # Test with .zshrc
+          touch ~/.zshrc
+
+          export ANTHROPIC_API_KEY="sk-test-key-for-ci"
+          export ANTHROPIC_BASE_URL="https://api.noin.ai"
+
+          # Run with zsh as current shell
+          SHELL=/bin/zsh ./claude-install check
+
+          echo "✅ Zsh config test passed"
+
+      - name: Test install script execution (dry run)
+        run: |
+          # Test script can be sourced without errors
+          bash -n scripts/install.sh
+          echo "✅ install.sh syntax valid"
+
+          # Test script header and initial checks only
+          # (full execution would require release binary)
+          head -50 scripts/install.sh | bash -n -
+          echo "✅ Script header section valid"

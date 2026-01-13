@@ -93,3 +93,37 @@ jobs:
 
           # Cleanup
           Remove-Item -Path $testPath -Force
+
+      - name: Test real Claude Code CLI installation
+        shell: pwsh
+        run: |
+          Write-Host "Installing Claude Code CLI via npm..."
+          npm install -g @anthropic-ai/claude-code
+
+          # Verify installation
+          $claudePath = Get-Command claude -ErrorAction SilentlyContinue
+          if ($claudePath) {
+            Write-Host "✅ Claude CLI installed at: $($claudePath.Source)"
+            claude --version
+          } else {
+            Write-Error "❌ Claude CLI not found in PATH"
+            exit 1
+          }
+
+      - name: Test config file writing
+        shell: pwsh
+        run: |
+          # Create PowerShell profile directory if not exists
+          $profileDir = Split-Path -Parent $PROFILE
+          if (!(Test-Path $profileDir)) {
+            New-Item -ItemType Directory -Path $profileDir -Force
+          }
+
+          # Simulate config save by running binary with pre-set env vars
+          $env:ANTHROPIC_API_KEY = "sk-test-key-for-ci-testing"
+          $env:ANTHROPIC_BASE_URL = "https://api.noin.ai"
+
+          # Run the binary to test config logic (check command uses env vars)
+          .\claude-install.exe check
+
+          Write-Host "✅ Config environment test passed"

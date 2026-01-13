@@ -85,6 +85,12 @@ func ConfigureAPI() error {
 		return fmt.Errorf("保存配置失败: %w", err)
 	}
 
+	// 同时设置当前进程的环境变量，以便后续测试可以使用
+	os.Setenv(system.EnvAPIKey, config.APIKey)
+	if config.APIBaseURL != "" {
+		os.Setenv(system.EnvBaseURL, config.APIBaseURL)
+	}
+
 	fmt.Println()
 	fmt.Println("✅ 配置已保存")
 	fmt.Println()
@@ -162,7 +168,7 @@ func saveConfig(config ConfigData) error {
 	}
 
 	// 写入更新后的配置
-	finalContent := strings.Join(cleanedLines, "\n") + strings.Join(newLines, "")
+	finalContent := strings.Join(cleanedLines, "\n") + strings.Join(newLines, "\n")
 	return os.WriteFile(shellRcPath, []byte(finalContent), 0644)
 }
 

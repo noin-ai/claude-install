@@ -1,7 +1,19 @@
 # Claude Code CLI 一键安装脚本 (Windows PowerShell)
 # 使用方式: irm https://noin.ai/install.ps1 | iex
+#
+# 如果遇到执行策略问题，请先运行:
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 $ErrorActionPreference = "Stop"
+
+# 检查执行策略
+$policy = Get-ExecutionPolicy -Scope CurrentUser
+if ($policy -eq "Restricted") {
+    Write-Host "⚠️  检测到 PowerShell 执行策略为 Restricted" -ForegroundColor Yellow
+    Write-Host "   请运行以下命令后重试:" -ForegroundColor Yellow
+    Write-Host "   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser" -ForegroundColor White
+    Write-Host ""
+}
 
 # 配置
 $BINARY_NAME = "claude-install"

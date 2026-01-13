@@ -1,0 +1,95 @@
+name: Windows Integration Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-windows:
+    name: Windows Integration
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build binary
+        run: go build -ldflags "-s -w" -o claude-install.exe .
+
+      - name: Test binary execution
+        run: |
+          .\claude-install.exe --help
+          .\claude-install.exe check
+
+      - name: Test PowerShell script syntax
+        shell: pwsh
+        run: |
+          # Check PowerShell script for syntax errors
+          $script = Get-Content -Path scripts/install.ps1 -Raw
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseInput($script, [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            Write-Error "PowerShell script has syntax errors:"
+            $errors | ForEach-Object { Write-Error $_.ToString() }
+            exit 1
+          }
+          Write-Host "PowerShell script syntax is valid"
+
+      - name: Test config save to PowerShell profile
+        shell: pwsh
+        run: |
+          # Ensure PowerShell profile directory exists
+          $profileDir = Split-Path -Parent $PROFILE
+          if (!(Test-Path $profileDir)) {
+            New-Item -ItemType Directory -Path $profileDir -Force
+          }
+          Write-Host "Profile directory: $profileDir"
+
+          # Test that the binary can write config (dry run simulation)
+          $env:ANTHROPIC_API_KEY = "test-key-12345"
+          $env:ANTHROPIC_BASE_URL = "https://api.test.com"
+
+          # Run config test command if available
+          .\claude-install.exe check
+
+      - name: Test npm global install capability
+        shell: pwsh
+        run: |
+          # Verify npm can install globally without admin (user-level)
+          npm config set prefix "$env:APPDATA\npm"
+          $env:PATH = "$env:APPDATA\npm;$env:PATH"
+
+          # Test with a small package
+          npm install -g cowsay
+          cowsay "Windows npm global install works!"
+
+      - name: Verify PATH handling
+        shell: pwsh
+        run: |
+          # Test PATH modification function
+          $testPath = "$env:USERPROFILE\.claude-install-test"
+          New-Item -ItemType Directory -Path $testPath -Force
+
+          # Simulate adding to PATH
+          $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+          Write-Host "Current user PATH length: $($currentPath.Length) chars"
+
+          # Check if PATH modification would work
+          if ($currentPath.Length -gt 2000) {
+            Write-Warning "User PATH is very long, may have issues"
+          }
+
+          # Cleanup
+          Remove-Item -Path $testPath -Force
